@@ -131,6 +131,81 @@ public class FeatureVectorIndex<TFeature, TValue>
     }
 
     /// <summary>
+    /// If the index contains any clause that subsumes the given clause, does nothing and returns <see langword="false"/>.
+    /// Otherwise, adds the given clause to the index, removes any clauses that it subsumes, and returns <see langword="true"/>.
+    /// </summary>
+    /// <param name="clause">The clause to add.</param>
+    /// <param name="value">The value to associate with the clause.</param>
+    /// <returns>True if and only if the clause was added.</returns>
+    public bool TryReplaceSubsumed(CNFClause clause, TValue value)
+    {
+        if (GetSubsuming(clause).Any())
+        {
+            return false;
+        }
+
+        // TODO-ZZ-PERFORMANCE: a bit of refactoring here would enable us to make the FV just once.
+        // Not a big deal for now.
+        var featureVector = MakeAndSortFeatureVector(clause);
+
+        ExpandNode(root, 0);
+
+        Add(clause, value);
+        return true;
+
+        // NB: subsumed clauses will have equal or higher vector elements.
+        // We allow zero-valued elements to be omitted from the vectors (so that we don't have to know what features are possible ahead of time).
+        // This makes the logic here a little similar to what you'd find in a set trie when querying for supersets.
+        void ExpandNode(IFeatureVectorIndexNode<TFeature, TValue> node, int componentIndex)
+        {
+            if (componentIndex < featureVector.Count)
+            {
+                var component = featureVector[componentIndex];
+
+                // NB: only need to compare feature (not magnitude) here because the only way that component index could be greater
+                // than 0 is if all earlier components matched to an ancestor node by feature (which had an equal or higher magnitude).
+                // And there shouldn't be any duplicate features in the path from root to leaf - so only need to look at feature here.
+                var matchingChildNodes = componentIndex == 0
+                    ? node.ChildrenDescending
+                    : node.ChildrenDescending.TakeWhile(kvp => root.FeatureComparer.Compare(kvp.Key.Feature, featureVector[componentIndex - 1].Feature) > 0);
+
+                foreach (var ((childFeature, childMagnitude), childNode) in matchingChildNodes)
+                {
+                    var childFeatureVsCurrent = root.FeatureComparer.Compare(childFeature, component.Feature);
+
+                    if (childFeatureVsCurrent <= 0)
+                    {
+                        var componentIndexOffset = childFeatureVsCurrent == 0 && childMagnitude >= component.Magnitude ? 1 : 0;
+                        ExpandNode(childNode, componentIndex + componentIndexOffset);
+                    }
+                }
+            }
+            else
+            {
+                RemoveAllDescendentSubsumed(node);
+            }
+        }
+
+        void RemoveAllDescendentSubsumed(IFeatureVectorIndexNode<TFeature, TValue> node)
+        {
+            // NB: note that we need to filter the values to those keyed by clauses that are
+            // actually subsumed by the query clause. The values of the matching nodes are just the *candidate* set.
+            foreach (var value in node.KeyValuePairs.Where(kvp => clause.Subsumes(kvp.Key)).Select(kvp => kvp.Value))
+            {
+                yield return value;
+            }
+
+            foreach (var (_, childNode) in node.ChildrenAscending)
+            {
+                foreach (var value in GetAllDescendentValues(childNode))
+                {
+                    yield return value;
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Attempts to retrieve the value associated with a clause, matched exactly.
     /// </summary>
     /// <param name="key">The clause to retrieve the associated value of.</param>

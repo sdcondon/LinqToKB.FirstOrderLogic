@@ -16,16 +16,17 @@ public static class FeatureVectorIndexTests
     public static Test NegativeAddBehaviour => TestThat
         .GivenEachOf<AddTestCase>(() =>
         [
-            new([], CNFClause.Empty),
-            new([new(P(U))], new(P(V)))
+            new(
+                PriorContent: [],
+                Add: CNFClause.Empty),
+
+            new(
+                PriorContent: [new(P(U))],
+                Add: new(P(V)))
         ])
         .When(tc =>
         {
-            var index = new FeatureVectorIndex<OccurenceCountFeature>(
-                OccurenceCountFeature.MakeFeatureVector,
-                new FeatureVectorIndexListNode<OccurenceCountFeature, CNFClause>(OccurenceCountFeature.MakeFeatureComparer(Comparer<object>.Default)),
-                tc.PriorContent);
-
+            var index = MakeOccurenceCountFVI(tc.PriorContent);
             index.Add(tc.Add);
         })
         .ThenThrows((_, ex) => ex.Should().BeOfType<ArgumentException>());
@@ -62,11 +63,7 @@ public static class FeatureVectorIndexTests
     ////    ])
     ////    .When(tc =>
     ////    {
-    ////        var index = new FeatureVectorIndex<OccurenceCountFeature>(
-    ////            OccurenceCountFeature.MakeFeatureVector,
-    ////            new FeatureVectorIndexListNode<OccurenceCountFeature, CNFClause>(OccurenceCountFeature.MakeFeatureComparer(Comparer<object>.Default)),
-    ////            tc.PriorContent);
-
+    ////        var index = MakeOccurenceCountFVI(tc.PriorContent);
     ////        return true; // index.TryReplaceSubsumed(tc.Add);
     ////    })
     ////    .Then((tc, rv) => rv.Should().Be(tc.ExpectedReturnValue));
@@ -75,10 +72,7 @@ public static class FeatureVectorIndexTests
     public static Test GetSubsumedBehaviour => TestThat
         .GivenEachOf(() =>
         {
-            var index = new FeatureVectorIndex<OccurenceCountFeature>(
-                OccurenceCountFeature.MakeFeatureVector,
-                new FeatureVectorIndexListNode<OccurenceCountFeature, CNFClause>(OccurenceCountFeature.MakeFeatureComparer(Comparer<object>.Default)),
-                SubsumptionFacts.AllNonEmptyClauses);
+            var index = MakeOccurenceCountFVI(SubsumptionFacts.AllNonEmptyClauses);
 
             return SubsumptionFacts.AllNonEmptyClauses.Select(c => new GetTestCase(
                 index,
@@ -94,10 +88,7 @@ public static class FeatureVectorIndexTests
     public static Test GetSubsumingBehaviour => TestThat
         .GivenEachOf(() =>
         {
-            var index = new FeatureVectorIndex<OccurenceCountFeature>(
-                OccurenceCountFeature.MakeFeatureVector,
-                new FeatureVectorIndexListNode<OccurenceCountFeature, CNFClause>(OccurenceCountFeature.MakeFeatureComparer(Comparer<object>.Default)),
-                SubsumptionFacts.AllNonEmptyClauses);
+            var index = MakeOccurenceCountFVI(SubsumptionFacts.AllNonEmptyClauses);
 
             return SubsumptionFacts.AllNonEmptyClauses.Select(c => new GetTestCase(
                 Index: index,
@@ -118,10 +109,7 @@ public static class FeatureVectorIndexTests
                 .Distinct(new VariableIdIgnorantEqualityComparer())
                 .ToArray();
 
-            var index = new FeatureVectorIndex<OccurenceCountFeature>(
-                OccurenceCountFeature.MakeFeatureVector,
-                new FeatureVectorIndexListNode<OccurenceCountFeature, CNFClause>(OccurenceCountFeature.MakeFeatureComparer(Comparer<object>.Default)),
-                content);
+            var index = MakeOccurenceCountFVI(content);
 
             return content.Select(c => new GetTestCaseExact(
                 Index: index,
@@ -142,7 +130,7 @@ public static class FeatureVectorIndexTests
 
             var index = new FeatureVectorIndex<OccurenceCountFeature>(
                 OccurenceCountFeature.MakeFeatureVector,
-                new FeatureVectorIndexListNode<OccurenceCountFeature, CNFClause>(OccurenceCountFeature.MakeFeatureComparer(Comparer<object>.Default)),
+                new FeatureVectorIndexListNode<OccurenceCountFeature, CNFClause>(OccurenceCountFeature.MakeFeatureComparer()),
                 content);
 
             return content.Select(c => new GetTestCaseExact(
@@ -153,6 +141,14 @@ public static class FeatureVectorIndexTests
         .When(tc => tc.Index.GetSubsumed(tc.Query))
         .ThenReturns()
         .And((tc, rv) => rv.Should().BeEquivalentTo(tc.Expected));
+
+    private static FeatureVectorIndex<OccurenceCountFeature> MakeOccurenceCountFVI(IEnumerable<CNFClause> content)
+    {
+        return new FeatureVectorIndex<OccurenceCountFeature>(
+            OccurenceCountFeature.MakeFeatureVector,
+            new FeatureVectorIndexListNode<OccurenceCountFeature, CNFClause>(OccurenceCountFeature.MakeFeatureComparer()),
+            content);
+    }
 
     private record AddTestCase(
         CNFClause[] PriorContent,
