@@ -71,6 +71,17 @@ public class FeatureVectorIndex<TFeature>
     }
 
     /// <summary>
+    /// If the index contains any clause that subsumes the given clause, does nothing and returns <see langword="false"/>.
+    /// Otherwise, adds the given clause to the index, removes any clauses that it subsumes, and returns <see langword="true"/>.
+    /// </summary>
+    /// <param name="clause">The clause to add.</param>
+    /// <returns>True if and only if the clause was added.</returns>
+    public bool TryReplaceSubsumed(CNFClause clause)
+    {
+        return innerIndex.TryReplaceSubsumed(clause, clause);
+    }
+
+    /// <summary>
     /// Determines whether a given clause (matched exactly) is present in the index.
     /// </summary>
     /// <param name="key">The clause to check for.</param>

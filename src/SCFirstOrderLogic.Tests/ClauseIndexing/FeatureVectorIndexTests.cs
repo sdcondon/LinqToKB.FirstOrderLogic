@@ -31,43 +31,44 @@ public static class FeatureVectorIndexTests
         })
         .ThenThrows((_, ex) => ex.Should().BeOfType<ArgumentException>());
 
-    ////public static Test TryReplaceSubsumedBehaviour => TestThat
-    ////    .GivenEachOf<TryReplaceSubsumedTestCase>(() =>
-    ////    [
-    ////        new(
-    ////            PriorContent: [],
-    ////            Add: new(P()),
-    ////            ExpectedReturnValue: true,
-    ////            ExpectedContent: [new(P())]),
+    public static Test TryReplaceSubsumedBehaviour => TestThat
+        .GivenEachOf<TryReplaceSubsumedTestCase>(() =>
+        [
+            new(
+                PriorContent: [],
+                Add: new(P()),
+                ExpectedReturnValue: true,
+                ExpectedContent: [new(P())]),
 
-    ////         new(
-    ////            PriorContent: [new(P())],
-    ////            Add: new(P()),
-    ////            ExpectedReturnValue: false,
-    ////            ExpectedContent: [new(P())]),
+             new(
+                PriorContent: [new(P())],
+                Add: new(P()),
+                ExpectedReturnValue: false,
+                ExpectedContent: [new(P())]),
 
-    ////         // nb somewhat tricky one. if the arg is subsumed, should it still remove
-    ////         // clauses that it subsumes? will def need to clarify in method docs. and
-    ////         // should think carefully about the name..
-    ////         new(
-    ////            PriorContent: [new(P()), new(P() | Q())],
-    ////            Add: new(P()),
-    ////            ExpectedReturnValue: false,
-    ////            ExpectedContent: [new(P()), new(P() | Q())]),
+             // NB a somewhat tricky one. if the arg is subsumed, should it still remove
+             // clauses that it subsumes? will def need to clarify in method docs. and
+             // should think carefully about the name..
+             new(
+                PriorContent: [new(P()), new(P() | Q())],
+                Add: new(P()),
+                ExpectedReturnValue: false,
+                ExpectedContent: [new(P()), new(P() | Q())]),
 
-    ////         new(
-    ////            PriorContent: [new(P() | Q()), new(P() | R())],
-    ////            Add: new(P()),
-    ////            ExpectedReturnValue: true,
-    ////            ExpectedContent: [new(P())]),
-    ////    ])
-    ////    .When(tc =>
-    ////    {
-    ////        var index = MakeOccurenceCountFVI(tc.PriorContent);
-    ////        return true; // index.TryReplaceSubsumed(tc.Add);
-    ////    })
-    ////    .Then((tc, rv) => rv.Should().Be(tc.ExpectedReturnValue));
-    ////    //.And((tc, _) => tc.)
+             new(
+                PriorContent: [new(P() | Q()), new(P() | R())],
+                Add: new(P()),
+                ExpectedReturnValue: true,
+                ExpectedContent: [new(P())]),
+        ])
+        .When(tc =>
+        {
+            var index = MakeOccurenceCountFVI(tc.PriorContent);
+            return (returnValue: index.TryReplaceSubsumed(tc.Add), index);
+        })
+        .ThenReturns()
+        .And((tc, outcome) => outcome.returnValue.Should().Be(tc.ExpectedReturnValue))
+        .And((tc, outcome) => outcome.index.Should().BeEquivalentTo(tc.ExpectedContent));
 
     public static Test GetSubsumedBehaviour => TestThat
         .GivenEachOf(() =>
@@ -75,10 +76,10 @@ public static class FeatureVectorIndexTests
             var index = MakeOccurenceCountFVI(SubsumptionFacts.AllNonEmptyClauses);
 
             return SubsumptionFacts.AllNonEmptyClauses.Select(c => new GetTestCase(
-                index,
-                c,
-                SubsumptionFacts.GetSubsumedClauses(c),
-                SubsumptionFacts.GetNonSubsumedClauses(c)));
+                Index: index,
+                Query: c,
+                ExpectedPresent: SubsumptionFacts.GetSubsumedClauses(c),
+                ExpectedAbsent: SubsumptionFacts.GetNonSubsumedClauses(c)));
         })
         .When(tc => tc.Index.GetSubsumed(tc.Query))
         .ThenReturns()
@@ -128,10 +129,7 @@ public static class FeatureVectorIndexTests
                 .Distinct(new VariableIdIgnorantEqualityComparer())
                 .ToArray();
 
-            var index = new FeatureVectorIndex<OccurenceCountFeature>(
-                OccurenceCountFeature.MakeFeatureVector,
-                new FeatureVectorIndexListNode<OccurenceCountFeature, CNFClause>(OccurenceCountFeature.MakeFeatureComparer()),
-                content);
+            var index = MakeOccurenceCountFVI(content);
 
             return content.Select(c => new GetTestCaseExact(
                 Index: index,

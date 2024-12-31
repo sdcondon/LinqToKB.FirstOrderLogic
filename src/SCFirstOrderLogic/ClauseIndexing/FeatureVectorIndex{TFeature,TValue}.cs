@@ -145,8 +145,8 @@ public class FeatureVectorIndex<TFeature, TValue> : IEnumerable<KeyValuePair<CNF
             return false;
         }
 
-        // TODO-ZZ-PERFORMANCE: a bit of refactoring here would enable us to make the FV just once.
-        // Not a big deal for now.
+        // TODO-PERFORMANCE: a bit of refactoring would enable us to make the FV just once
+        // rather than three times. Not a big deal for now.
         var featureVector = MakeAndSortFeatureVector(clause);
 
         ExpandNode(root, 0);
