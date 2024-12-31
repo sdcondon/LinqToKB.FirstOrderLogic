@@ -2,6 +2,7 @@
 // You may use this file in accordance with the terms of the MIT license.
 using SCFirstOrderLogic.SentenceManipulation.VariableManipulation;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -19,7 +20,7 @@ namespace SCFirstOrderLogic.ClauseIndexing;
 /// </summary>
 /// <typeparam name="TFeature">The type of the keys of the feature vectors.</typeparam>
 /// <typeparam name="TValue">The type of the value associated with each stored clause.</typeparam>
-public class FeatureVectorIndex<TFeature, TValue>
+public class FeatureVectorIndex<TFeature, TValue> : IEnumerable<KeyValuePair<CNFClause, TValue>>
     where TFeature : notnull
 {
     /// <summary>
@@ -211,6 +212,7 @@ public class FeatureVectorIndex<TFeature, TValue>
     /// <param name="key">The clause to retrieve the associated value of.</param>
     /// <param name="value">Will be populated with the retrieved value.</param>
     /// <returns>True if and only if a value was successfully retrieved.</returns>
+    // TODO-BREAKING: Should probably be called TryGetValue, for consistency with IDictionary
     public bool TryGet(CNFClause key, [MaybeNullWhen(false)] out TValue value)
     {
         ArgumentNullException.ThrowIfNull(key);
@@ -359,6 +361,36 @@ public class FeatureVectorIndex<TFeature, TValue>
             }
         }
     }
+
+    /// <inheritdoc />
+    public IEnumerator<KeyValuePair<CNFClause, TValue>> GetEnumerator()
+    {
+        foreach (var kvp in GetAllKeyValuePairs(root))
+        {
+            yield return kvp;
+        }
+
+        IEnumerable<KeyValuePair<CNFClause, TValue>> GetAllKeyValuePairs(IFeatureVectorIndexNode<TFeature, TValue> node)
+        {
+            // NB: note that we need to filter the values to those keyed by clauses that are
+            // actually subsumed by the query clause. The values of the matching nodes are just the *candidate* set.
+            foreach (var kvp in node.KeyValuePairs)
+            {
+                yield return kvp;
+            }
+
+            foreach (var (_, childNode) in node.ChildrenAscending)
+            {
+                foreach (var value in GetAllKeyValuePairs(childNode))
+                {
+                    yield return value;
+                }
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     /// <summary>
     /// Gets the feature vector for a clause, and sorts it using the feature comparer specified by the index's root node.
