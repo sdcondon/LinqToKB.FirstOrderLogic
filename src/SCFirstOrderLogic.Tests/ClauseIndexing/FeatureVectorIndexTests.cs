@@ -56,10 +56,10 @@ public static class FeatureVectorIndexTests
                 ExpectedContent: [new(P()), new(P() | Q())]),
 
              new(
-                PriorContent: [new(P() | Q()), new(P() | R())],
+                PriorContent: [new(P() | Q()), new(P() | R()), new(P() | Q() | R()), new(Q())],
                 Add: new(P()),
                 ExpectedReturnValue: true,
-                ExpectedContent: [new(P())]),
+                ExpectedContent: [new(P()), new(Q())]),
         ])
         .When(tc =>
         {
