@@ -1,6 +1,7 @@
 ﻿// Copyright © 2023-2024 Simon Condon.
 // You may use this file in accordance with the terms of the MIT license.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,7 +17,7 @@ namespace SCFirstOrderLogic.ClauseIndexing;
 /// </para>
 /// </summary>
 /// <typeparam name="TFeature">The type of the keys of the feature vectors.</typeparam>
-public class FeatureVectorIndex<TFeature>
+public class FeatureVectorIndex<TFeature> : IEnumerable<CNFClause>
     where TFeature : notnull
 {
     /// <summary>
@@ -106,5 +107,15 @@ public class FeatureVectorIndex<TFeature>
     public IEnumerable<CNFClause> GetSubsumed(CNFClause clause)
     {
         return innerIndex.GetSubsumed(clause);
+    }
+
+    public IEnumerator<CNFClause> GetEnumerator()
+    {
+        throw new NotImplementedException();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        throw new NotImplementedException();
     }
 }

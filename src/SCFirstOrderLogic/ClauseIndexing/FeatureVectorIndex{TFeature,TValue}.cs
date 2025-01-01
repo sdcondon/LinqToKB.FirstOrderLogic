@@ -370,7 +370,7 @@ public class FeatureVectorIndex<TFeature, TValue> : IEnumerable<KeyValuePair<CNF
             yield return kvp;
         }
 
-        IEnumerable<KeyValuePair<CNFClause, TValue>> GetAllKeyValuePairs(IFeatureVectorIndexNode<TFeature, TValue> node)
+        static IEnumerable<KeyValuePair<CNFClause, TValue>> GetAllKeyValuePairs(IFeatureVectorIndexNode<TFeature, TValue> node)
         {
             // NB: note that we need to filter the values to those keyed by clauses that are
             // actually subsumed by the query clause. The values of the matching nodes are just the *candidate* set.
@@ -381,9 +381,9 @@ public class FeatureVectorIndex<TFeature, TValue> : IEnumerable<KeyValuePair<CNF
 
             foreach (var (_, childNode) in node.ChildrenAscending)
             {
-                foreach (var value in GetAllKeyValuePairs(childNode))
+                foreach (var kvp in GetAllKeyValuePairs(childNode))
                 {
-                    yield return value;
+                    yield return kvp;
                 }
             }
         }

@@ -5,6 +5,7 @@ using SCFirstOrderLogic.SentenceManipulation.VariableManipulation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SCFirstOrderLogic.ClauseIndexing;
@@ -23,7 +24,7 @@ namespace SCFirstOrderLogic.ClauseIndexing;
 // todo-breaking-performance: at least on the read side, consider processing nodes in parallel.
 // what are some best practices here (esp re consumers/node implementers being able to control DoP)?
 // e.g allow consumers to pass a scheduler? allow nodes to specify a scheduler?
-public class AsyncFeatureVectorIndex<TFeature, TValue>
+public class AsyncFeatureVectorIndex<TFeature, TValue> : IAsyncEnumerable<KeyValuePair<TFeature, TValue>>
     where TFeature : notnull
 {
     /// <summary>
@@ -281,6 +282,11 @@ public class AsyncFeatureVectorIndex<TFeature, TValue>
                 }
             }
         }
+    }
+
+    public async IAsyncEnumerator<KeyValuePair<TFeature, TValue>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
     }
 
     /// <summary>
