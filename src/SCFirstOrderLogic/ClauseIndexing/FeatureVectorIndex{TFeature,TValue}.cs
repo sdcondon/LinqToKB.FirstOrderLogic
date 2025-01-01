@@ -4,6 +4,7 @@ using SCFirstOrderLogic.SentenceManipulation.VariableManipulation;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
@@ -170,15 +171,25 @@ public class FeatureVectorIndex<TFeature, TValue> : IEnumerable<KeyValuePair<CNF
                     ? node.ChildrenDescending
                     : node.ChildrenDescending.TakeWhile(kvp => root.FeatureComparer.Compare(kvp.Key.Feature, featureVector[componentIndex - 1].Feature) > 0);
 
-                foreach (var ((childFeature, childMagnitude), childNode) in matchingChildNodes)
+                var toRemove = new List<FeatureVectorComponent<TFeature>>();
+                foreach (var (childComponent, childNode) in matchingChildNodes)
                 {
-                    var childFeatureVsCurrent = root.FeatureComparer.Compare(childFeature, component.Feature);
+                    var childFeatureVsCurrent = root.FeatureComparer.Compare(childComponent.Feature, component.Feature);
 
                     if (childFeatureVsCurrent <= 0)
                     {
-                        var componentIndexOffset = childFeatureVsCurrent == 0 && childMagnitude >= component.Magnitude ? 1 : 0;
+                        var componentIndexOffset = childFeatureVsCurrent == 0 && childComponent.Magnitude >= component.Magnitude ? 1 : 0;
                         ExpandNode(childNode, componentIndex + componentIndexOffset);
+                        if (!childNode.ChildrenAscending.Any() && !childNode.KeyValuePairs.Any())
+                        {
+                            toRemove.Add(childComponent);
+                        }
                     }
+                }
+
+                foreach (var childComponent in toRemove)
+                {
+                    node.DeleteChild(childComponent);
                 }
             }
             else
@@ -191,17 +202,25 @@ public class FeatureVectorIndex<TFeature, TValue> : IEnumerable<KeyValuePair<CNF
         {
             // NB: note that we need to filter the values to those keyed by clauses that are
             // actually subsumed by the query clause. The values of the matching nodes are just the *candidate* set.
-            foreach (var value in node.KeyValuePairs.Where(kvp => clause.Subsumes(kvp.Key)).Select(kvp => kvp.Value))
+            foreach (var (key, _) in node.KeyValuePairs.Where(kvp => clause.Subsumes(kvp.Key)))
             {
-                yield return value;
+                node.RemoveValue(key);
             }
 
-            foreach (var (_, childNode) in node.ChildrenAscending)
+            var toRemove = new List<FeatureVectorComponent<TFeature>>();
+            foreach (var (childComponent, childNode) in node.ChildrenAscending)
             {
-                foreach (var value in GetAllDescendentValues(childNode))
+                RemoveAllDescendentSubsumed(childNode);
+
+                if (!childNode.ChildrenAscending.Any() && !childNode.KeyValuePairs.Any())
                 {
-                    yield return value;
+                    toRemove.Add(childComponent);
                 }
+            }
+
+            foreach (var childComponent in toRemove)
+            {
+                node.DeleteChild(childComponent);
             }
         }
     }
