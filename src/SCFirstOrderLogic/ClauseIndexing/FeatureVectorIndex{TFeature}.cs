@@ -109,13 +109,15 @@ public class FeatureVectorIndex<TFeature> : IEnumerable<CNFClause>
         return innerIndex.GetSubsumed(clause);
     }
 
+    /// <inheritdoc />>
     public IEnumerator<CNFClause> GetEnumerator()
     {
-        throw new NotImplementedException();
+        foreach (var (_, value) in innerIndex)
+        {
+            yield return value;
+        }
     }
 
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        throw new NotImplementedException();
-    }
+    /// <inheritdoc />>
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SCFirstOrderLogic.ClauseIndexing;
@@ -17,7 +18,7 @@ namespace SCFirstOrderLogic.ClauseIndexing;
 /// </para>
 /// </summary>
 /// <typeparam name="TFeature">The type of each key of the feature vectors.</typeparam>
-public class AsyncFeatureVectorIndex<TFeature>
+public class AsyncFeatureVectorIndex<TFeature> : IAsyncEnumerable<CNFClause>
     where TFeature : notnull
 {
     /// <summary>
@@ -86,4 +87,13 @@ public class AsyncFeatureVectorIndex<TFeature>
     /// <param name="clause">The stored clauses that are subsumed by this clause will be retrieved.</param>
     /// <returns>An async enumerable of each clause that is subsumed by the given clause.</returns>
     public IAsyncEnumerable<CNFClause> GetSubsumed(CNFClause clause) => innerIndex.GetSubsumed(clause);
+
+    /// <inheritdoc />
+    public async IAsyncEnumerator<CNFClause> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+    {
+        await foreach (var (_, value) in innerIndex.WithCancellation(cancellationToken))
+        {
+            yield return value;
+        }
+    }
 }

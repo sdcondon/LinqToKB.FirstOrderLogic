@@ -24,7 +24,7 @@ namespace SCFirstOrderLogic.ClauseIndexing;
 // todo-breaking-performance: at least on the read side, consider processing nodes in parallel.
 // what are some best practices here (esp re consumers/node implementers being able to control DoP)?
 // e.g allow consumers to pass a scheduler? allow nodes to specify a scheduler?
-public class AsyncFeatureVectorIndex<TFeature, TValue> : IAsyncEnumerable<KeyValuePair<TFeature, TValue>>
+public class AsyncFeatureVectorIndex<TFeature, TValue> : IAsyncEnumerable<KeyValuePair<CNFClause, TValue>>
     where TFeature : notnull
 {
     /// <summary>
@@ -284,9 +284,31 @@ public class AsyncFeatureVectorIndex<TFeature, TValue> : IAsyncEnumerable<KeyVal
         }
     }
 
-    public async IAsyncEnumerator<KeyValuePair<TFeature, TValue>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async IAsyncEnumerator<KeyValuePair<CNFClause, TValue>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        await foreach (var kvp in GetAllKeyValuePairs(root))
+        {
+            yield return kvp;
+        }
+
+        static async IAsyncEnumerable<KeyValuePair<CNFClause, TValue>> GetAllKeyValuePairs(IAsyncFeatureVectorIndexNode<TFeature, TValue> node)
+        {
+            // NB: note that we need to filter the values to those keyed by clauses that are
+            // actually subsumed by the query clause. The values of the matching nodes are just the *candidate* set.
+            await foreach (var kvp in node.KeyValuePairs)
+            {
+                yield return kvp;
+            }
+
+            await foreach (var (_, childNode) in node.ChildrenAscending)
+            {
+                await foreach (var kvp in GetAllKeyValuePairs(childNode))
+                {
+                    yield return kvp;
+                }
+            }
+        }
     }
 
     /// <summary>
